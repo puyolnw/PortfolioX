@@ -4,11 +4,13 @@ import { ScrollTrigger } from 'gsap/ScrollTrigger';
 import { ArrowDown, Code2, Terminal } from 'lucide-react';
 import { heroConfig, translations } from '../config';
 import { useLanguage } from '../contexts/LanguageContext';
+import { useSectionTracking } from '../hooks/useSectionTracking';
+import { trackClick } from '../lib/analytics';
 
 gsap.registerPlugin(ScrollTrigger);
 
 const Hero = () => {
-  const sectionRef = useRef<HTMLElement>(null);
+  const sectionRef = useSectionTracking('Hero');
   const gridRef = useRef<HTMLDivElement>(null);
   const contentRef = useRef<HTMLDivElement>(null);
   const [isLoaded, setIsLoaded] = useState(false);
@@ -217,7 +219,10 @@ const Hero = () => {
           {/* CTA Buttons */}
           <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
             <button
-              onClick={() => scrollToSection('#projects')}
+              onClick={() => {
+                trackClick('View Projects', 'Hero');
+                scrollToSection('#projects');
+              }}
               className="cta-button group flex items-center gap-3 px-8 py-4 bg-red-500 text-white font-display font-bold text-sm uppercase tracking-wider hover:bg-red-600 transition-all duration-300"
               data-cursor-hover
             >
@@ -225,7 +230,10 @@ const Hero = () => {
               <ArrowDown className="w-4 h-4 group-hover:translate-y-1 transition-transform duration-300" />
             </button>
             <button
-              onClick={() => scrollToSection('#contact')}
+              onClick={() => {
+                trackClick('Contact Me', 'Hero');
+                scrollToSection('#contact');
+              }}
               className="cta-button px-8 py-4 border-2 border-white/30 dark:border-white/30 light:border-black/30 text-white dark:text-white light:text-black font-display font-bold text-sm uppercase tracking-wider hover:border-red-500 hover:text-red-500 transition-all duration-300"
               data-cursor-hover
             >
@@ -234,6 +242,7 @@ const Hero = () => {
           </div>
         </div>
       </div>
+
 
       {/* Corner decorations */}
       <div className="absolute top-24 left-6 w-16 h-16 border-l-2 border-t-2 border-red-500/30 z-20" />

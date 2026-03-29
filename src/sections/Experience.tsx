@@ -4,11 +4,12 @@ import { ScrollTrigger } from 'gsap/ScrollTrigger';
 import { Briefcase, Building2, Calendar, CheckCircle2 } from 'lucide-react';
 import { experienceData, translations } from '../config';
 import { useLanguage } from '../contexts/LanguageContext';
+import { useSectionTracking } from '../hooks/useSectionTracking';
 
 gsap.registerPlugin(ScrollTrigger);
 
 const Experience = () => {
-  const sectionRef = useRef<HTMLElement>(null);
+  const sectionRef = useSectionTracking('Experience');
   const contentRef = useRef<HTMLDivElement>(null);
   const triggersRef = useRef<ScrollTrigger[]>([]);
   const { language } = useLanguage();

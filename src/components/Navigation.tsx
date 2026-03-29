@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { Menu, X, Globe } from 'lucide-react';
 import { getNavigationConfig } from '../config';
 import { useLanguage } from '../contexts/LanguageContext';
+import { trackClick } from '../lib/analytics';
 
 const Navigation = () => {
   const [isScrolled, setIsScrolled] = useState(false);
@@ -58,7 +59,11 @@ const Navigation = () => {
               <a
                 key={link.href}
                 href={link.href}
-                onClick={(e) => { e.preventDefault(); scrollToSection(link.href); }}
+                onClick={(e) => { 
+                  e.preventDefault(); 
+                  trackClick(`Nav: ${link.label}`, 'Navigation');
+                  scrollToSection(link.href); 
+                }}
                 className="font-body text-sm text-white/70 dark:text-white/70 light:text-black/70 hover:text-red-500 transition-colors duration-300 uppercase tracking-widest thai-text"
               >
                 {link.label}
@@ -67,7 +72,10 @@ const Navigation = () => {
             
             {/* Language Toggle */}
             <button
-              onClick={toggleLanguage}
+              onClick={() => {
+                trackClick(`Language Toggle: ${language === 'th' ? 'EN' : 'TH'}`, 'Navigation');
+                toggleLanguage();
+              }}
               className="flex items-center gap-2 px-3 py-1 border border-white/30 dark:border-white/30 light:border-black/30 rounded-full text-white/70 dark:text-white/70 light:text-black/70 hover:text-red-500 hover:border-red-500 transition-all duration-300"
               data-cursor-hover
             >
@@ -78,7 +86,10 @@ const Navigation = () => {
 
             {navigationConfig.ctaText && (
               <button 
-                onClick={() => scrollToSection('#contact')}
+                onClick={() => {
+                  trackClick('CTA: Navigation', 'Navigation');
+                  scrollToSection('#contact');
+                }}
                 className="px-6 py-2 bg-red-500 text-white font-display font-bold text-sm uppercase tracking-wider hover:bg-red-600 transition-colors duration-300"
               >
                 {navigationConfig.ctaText}

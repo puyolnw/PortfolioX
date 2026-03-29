@@ -4,11 +4,13 @@ import { ScrollTrigger } from 'gsap/ScrollTrigger';
 import { Briefcase, GraduationCap, Award, Globe, Heart, MapPin, Mail, Phone } from 'lucide-react';
 import { aboutConfig, personalInfo, translations } from '../config';
 import { useLanguage } from '../contexts/LanguageContext';
+import { useSectionTracking } from '../hooks/useSectionTracking';
+import { trackClick } from '../lib/analytics';
 
 gsap.registerPlugin(ScrollTrigger);
 
 const About = () => {
-  const sectionRef = useRef<HTMLElement>(null);
+  const sectionRef = useSectionTracking('About');
   const contentRef = useRef<HTMLDivElement>(null);
   const triggersRef = useRef<ScrollTrigger[]>([]);
   const { language } = useLanguage();
@@ -225,6 +227,7 @@ const About = () => {
               <div className="absolute -bottom-4 left-0 right-0 flex justify-center gap-2">
                 <a 
                   href={`mailto:${personalInfo.email}`}
+                  onClick={() => trackClick('Email', 'About Profile')}
                   className="px-3 py-2 bg-white text-black font-body text-xs flex items-center gap-1 hover:bg-red-500 hover:text-white transition-colors duration-300"
                 >
                   <Mail className="w-3 h-3" />
@@ -232,6 +235,7 @@ const About = () => {
                 </a>
                 <a 
                   href={`tel:${personalInfo.phone}`}
+                  onClick={() => trackClick('Call', 'About Profile')}
                   className="px-3 py-2 bg-white text-black font-body text-xs flex items-center gap-1 hover:bg-red-500 hover:text-white transition-colors duration-300"
                 >
                   <Phone className="w-3 h-3" />

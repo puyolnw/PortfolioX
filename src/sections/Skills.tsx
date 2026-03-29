@@ -7,6 +7,8 @@ import {
 } from 'lucide-react';
 import { skillsData, skillsConfig, translations, type ProficiencyLevel } from '../config';
 import { useLanguage } from '../contexts/LanguageContext';
+import { useSectionTracking } from '../hooks/useSectionTracking';
+import { trackClick } from '../lib/analytics';
 
 gsap.registerPlugin(ScrollTrigger);
 
@@ -47,7 +49,7 @@ const proficiencyConfig: Record<ProficiencyLevel, { icon: React.ElementType; lab
 // };
 
 const Skills = () => {
-  const sectionRef = useRef<HTMLElement>(null);
+  const sectionRef = useSectionTracking('Skills');
   const contentRef = useRef<HTMLDivElement>(null);
   const triggersRef = useRef<ScrollTrigger[]>([]);
   const [activeCategory, setActiveCategory] = useState<string>('all');
@@ -167,7 +169,10 @@ const Skills = () => {
           {categories.map((cat) => (
             <button
               key={cat.key}
-              onClick={() => setActiveCategory(cat.key)}
+              onClick={() => {
+                trackClick(`Filter: ${cat.label}`, 'Skills');
+                setActiveCategory(cat.key);
+              }}
               className={`category-tab px-4 py-2 font-display font-bold text-xs uppercase tracking-wider transition-all duration-300 ${
                 activeCategory === cat.key
                   ? 'bg-red-500 text-white'

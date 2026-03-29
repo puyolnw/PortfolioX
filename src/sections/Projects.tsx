@@ -5,6 +5,8 @@ import { ScrollTrigger } from 'gsap/ScrollTrigger';
 import { ChevronRight, X, Play, Image as ImageIcon, Maximize2, Award } from 'lucide-react';
 import { projectsData, projectsConfig, translations } from '../config';
 import { useLanguage } from '../contexts/LanguageContext';
+import { useSectionTracking } from '../hooks/useSectionTracking';
+import { trackClick } from '../lib/analytics';
 
 gsap.registerPlugin(ScrollTrigger);
 
@@ -356,11 +358,12 @@ const Projects = () => {
   const { language } = useLanguage();
   const [activeProject, setActiveProject] = useState<typeof projectsData[0] | null>(null);
   const [initialTab, setInitialTab] = useState<'details' | 'preview' | 'gallery'>('details');
-  const sectionRef = useRef<HTMLElement>(null);
+  const sectionRef = useSectionTracking('Projects');
   const contentRef = useRef<HTMLDivElement>(null);
   const t = translations[language].projects;
   const triggersRef = useRef<ScrollTrigger[]>([]);
   const handleGlobalDemoClick = (project: typeof projectsData[0]) => {
+    trackClick(`View Demo: ${project.name}`, 'Projects Card');
     setActiveProject(project);
     setInitialTab('preview');
   };
@@ -488,6 +491,7 @@ const Projects = () => {
                     )}
                     <button
                       onClick={() => {
+                        trackClick(`View Details: ${project.name}`, 'Projects Card');
                         setActiveProject(project);
                         setInitialTab('details');
                       }}

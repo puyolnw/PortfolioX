@@ -4,11 +4,13 @@ import { ScrollTrigger } from 'gsap/ScrollTrigger';
 import { Mail, MapPin, Github, Facebook } from 'lucide-react';
 import { personalInfo, translations } from '../config';
 import { useLanguage } from '../contexts/LanguageContext';
+import { useSectionTracking } from '../hooks/useSectionTracking';
+import { trackClick } from '../lib/analytics';
 
 gsap.registerPlugin(ScrollTrigger);
 
 const Contact = () => {
-  const sectionRef = useRef<HTMLElement>(null);
+  const sectionRef = useSectionTracking('Contact');
   const contentRef = useRef<HTMLDivElement>(null);
   const triggersRef = useRef<ScrollTrigger[]>([]);
   const { language } = useLanguage();
@@ -147,6 +149,7 @@ const Contact = () => {
                   href={social.href}
                   target="_blank"
                   rel="noopener noreferrer"
+                  onClick={() => trackClick(`Social: ${social.label}`, 'Contact')}
                   className="social-link w-12 h-12 bg-white/5 dark:bg-white/5 light:bg-black/5 border border-white/10 dark:border-white/10 light:border-black/10 flex items-center justify-center text-white/70 dark:text-white/70 light:text-black/70 hover:bg-red-500 hover:text-white hover:border-red-500 transition-all duration-300"
                   data-cursor-hover
                 >
