@@ -1,58 +1,73 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useRef } from 'react';
 import gsap from 'gsap';
 import { ScrollTrigger } from 'gsap/ScrollTrigger';
 import { Icon } from '@iconify/react';
 import { 
-  Star, Sparkles, Circle
+  Flame, Zap, BookOpen
 } from 'lucide-react';
 import { skillsData, skillsConfig, translations, type ProficiencyLevel } from '../config';
 import { useLanguage } from '../contexts/LanguageContext';
 import { useSectionTracking } from '../hooks/useSectionTracking';
-import { trackClick } from '../lib/analytics';
 
 gsap.registerPlugin(ScrollTrigger);
 
-
-
-const proficiencyConfig: Record<ProficiencyLevel, { icon: React.ElementType; label: string; labelTh: string; color: string; bgColor: string }> = {
-  high: {
-    icon: Star,
-    label: 'Proficient',
-    labelTh: 'ชำนาญ',
-    color: '#4CAF50',
-    bgColor: 'rgba(76, 175, 80, 0.15)',
-  },
-  medium: {
-    icon: Sparkles,
-    label: 'Familiar',
-    labelTh: 'พอใช้',
-    color: '#FF9800',
-    bgColor: 'rgba(255, 152, 0, 0.15)',
-  },
-  low: {
-    icon: Circle,
-    label: 'Learning',
-    labelTh: 'กำลังหัด',
-    color: '#9E9E9E',
-    bgColor: 'rgba(158, 158, 158, 0.15)',
-  },
+type TierKey = 'S' | 'A' | 'B';
+type TierConfig = {
+  tier: TierKey;
+  sourceProficiency: ProficiencyLevel;
+  icon: React.ElementType;
+  title: string;
+  titleTh: string;
+  usage: string;
+  usageTh: string;
+  colorClass: string;
+  bgClass: string;
+  borderClass: string;
 };
 
-// Category labels for reference
-// const categoryLabels: Record<string, { en: string; th: string }> = {
-//   languages: { en: 'Programming Languages', th: 'ภาษาโปรแกรม' },
-//   frontend: { en: 'Frontend', th: 'Frontend' },
-//   backend: { en: 'Backend', th: 'Backend' },
-//   database: { en: 'Databases', th: 'ฐานข้อมูล' },
-//   devops: { en: 'DevOps & Testing', th: 'DevOps & Testing' },
-//   tools: { en: 'Tools', th: 'เครื่องมือ' },
-// };
+const tierConfig: TierConfig[] = [
+  {
+    tier: 'S',
+    sourceProficiency: 'high',
+    icon: Flame,
+    title: 'Core Stack',
+    titleTh: 'ตัวหลักที่ใช้ประจำ',
+    usage: 'Daily / almost every project',
+    usageTh: 'ใช้ทุกวัน / แทบทุกโปรเจกต์',
+    colorClass: 'text-red-400',
+    bgClass: 'bg-red-500/15',
+    borderClass: 'border-red-500/40',
+  },
+  {
+    tier: 'A',
+    sourceProficiency: 'medium',
+    icon: Zap,
+    title: 'Strong Working',
+    titleTh: 'ใช้งานคล่อง',
+    usage: 'Weekly / frequent use',
+    usageTh: 'ใช้บ่อยทุกสัปดาห์',
+    colorClass: 'text-orange-400',
+    bgClass: 'bg-orange-500/15',
+    borderClass: 'border-orange-500/40',
+  },
+  {
+    tier: 'B',
+    sourceProficiency: 'low',
+    icon: BookOpen,
+    title: 'Learning Zone',
+    titleTh: 'กำลังพัฒนา',
+    usage: 'Occasional / currently improving',
+    usageTh: 'ใช้เป็นครั้งคราว / กำลังอัปสกิล',
+    colorClass: 'text-blue-400',
+    bgClass: 'bg-blue-500/15',
+    borderClass: 'border-blue-500/40',
+  },
+];
 
 const Skills = () => {
   const sectionRef = useSectionTracking('Skills');
   const contentRef = useRef<HTMLDivElement>(null);
   const triggersRef = useRef<ScrollTrigger[]>([]);
-  const [activeCategory, setActiveCategory] = useState<string>('all');
   const { language } = useLanguage();
   const t = translations[language].skills;
 
@@ -62,8 +77,8 @@ const Skills = () => {
     if (!section || !content) return;
 
     const heading = content.querySelector('.section-heading');
-    const categoryTabs = content.querySelectorAll('.category-tab');
-    const skillCards = content.querySelectorAll('.skill-card');
+    const tierRows = content.querySelectorAll('.tier-row');
+    const tierChips = content.querySelectorAll('.tier-chip');
 
     const tl = gsap.timeline({
       scrollTrigger: {
@@ -81,16 +96,16 @@ const Skills = () => {
     );
 
     tl.fromTo(
-      categoryTabs,
+      tierRows,
       { opacity: 0, y: 20 },
-      { opacity: 1, y: 0, duration: 0.4, stagger: 0.05, ease: 'power2.out' },
+      { opacity: 1, y: 0, duration: 0.45, stagger: 0.12, ease: 'power2.out' },
       '-=0.4'
     );
 
     tl.fromTo(
-      skillCards,
-      { opacity: 0, rotateX: -90, y: 50 },
-      { opacity: 1, rotateX: 0, y: 0, duration: 0.6, stagger: 0.03, ease: 'back.out(1.4)' },
+      tierChips,
+      { opacity: 0, scale: 0.92, y: 18 },
+      { opacity: 1, scale: 1, y: 0, duration: 0.35, stagger: 0.015, ease: 'power2.out' },
       '-=0.2'
     );
 
@@ -102,21 +117,13 @@ const Skills = () => {
       triggersRef.current.forEach(trigger => trigger.kill());
       triggersRef.current = [];
     };
-  }, [activeCategory]);
+  }, []);
 
-  const filteredSkills = activeCategory === 'all' 
-    ? skillsData 
-    : skillsData.filter(skill => skill.category === activeCategory);
+  const tierRows = tierConfig.map((tier) => {
+    const items = skillsData.filter((skill) => skill.proficiency === tier.sourceProficiency);
 
-  const categories = [
-    { key: 'all', label: 'All' },
-    { key: 'languages', label: t.categories.languages },
-    { key: 'frontend', label: t.categories.frontend },
-    { key: 'backend', label: t.categories.backend },
-    { key: 'database', label: t.categories.database },
-    { key: 'devops', label: t.categories.devops },
-    { key: 'tools', label: t.categories.tools },
-  ];
+    return { ...tier, items };
+  });
 
   return (
     <section
@@ -129,9 +136,9 @@ const Skills = () => {
         {skillsConfig.decorativeText}
       </div>
 
-      <div ref={contentRef} className="relative z-10 w-full px-6 lg:px-12">
+      <div ref={contentRef} className="relative z-10 w-full px-4 sm:px-6 lg:px-10">
         {/* Section Header */}
-        <div className="text-center mb-12">
+        <div className="text-center mb-10">
           <div className="section-heading flex items-center justify-center gap-4 mb-8">
             <div className="w-12 h-[2px] bg-red-500" />
             <span className="font-body text-sm text-red-500 uppercase tracking-[0.3em]">
@@ -146,80 +153,76 @@ const Skills = () => {
           </h2>
         </div>
 
-        {/* Proficiency Legend */}
-        <div className="flex flex-wrap justify-center gap-3 mb-8">
-          {(Object.keys(proficiencyConfig) as ProficiencyLevel[]).map((level) => {
-            const config = proficiencyConfig[level];
-            const Icon = config.icon;
-            return (
-              <div 
-                key={level}
-                className="flex items-center gap-2 px-3 py-1.5 rounded-full text-xs font-body"
-                style={{ backgroundColor: config.bgColor, color: config.color }}
-              >
-                <Icon className="w-3.5 h-3.5" />
-                <span className="thai-text">{language === 'th' ? config.labelTh : config.label}</span>
-              </div>
-            );
-          })}
-        </div>
-
-        {/* Category Tabs */}
-        <div className="flex flex-wrap justify-center gap-2 mb-12">
-          {categories.map((cat) => (
-            <button
-              key={cat.key}
-              onClick={() => {
-                trackClick(`Filter: ${cat.label}`, 'Skills');
-                setActiveCategory(cat.key);
-              }}
-              className={`category-tab px-4 py-2 font-display font-bold text-xs uppercase tracking-wider transition-all duration-300 ${
-                activeCategory === cat.key
-                  ? 'bg-red-500 text-white'
-                  : 'bg-white/5 dark:bg-white/5 light:bg-black/5 text-white/70 dark:text-white/70 light:text-black/70 hover:bg-white/10 hover:text-red-500 border border-white/10 dark:border-white/10 light:border-black/10'
-              }`}
-              data-cursor-hover
-            >
-              {cat.label}
-            </button>
-          ))}
-        </div>
-
-        {/* Skills Grid */}
-        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-3 max-w-6xl mx-auto">
-          {filteredSkills.map((skill, index) => {
-            const profConfig = proficiencyConfig[skill.proficiency];
-            const ProficiencyIcon = profConfig.icon;
-            
+        {/* Tier List Table */}
+        <div className="w-full space-y-3">
+          {tierRows.map((row) => {
+            const TierIcon = row.icon;
+            const chipSizeClass =
+              row.tier === 'S'
+                ? 'gap-3 px-4 py-3 rounded-xl'
+                : row.tier === 'A'
+                  ? 'gap-2.5 px-3.5 py-2.5 rounded-lg'
+                  : 'gap-2 px-3 py-2 rounded-lg';
+            const iconWrapClass =
+              row.tier === 'S'
+                ? 'w-9 h-9 rounded-lg'
+                : row.tier === 'A'
+                  ? 'w-8 h-8 rounded-md'
+                  : 'w-7 h-7 rounded-md';
+            const iconClass =
+              row.tier === 'S' ? 'w-5 h-5' : row.tier === 'A' ? 'w-4.5 h-4.5' : 'w-4 h-4';
+            const textClass =
+              row.tier === 'S'
+                ? 'text-sm md:text-base font-semibold'
+                : row.tier === 'A'
+                  ? 'text-xs md:text-sm'
+                  : 'text-xs';
             return (
               <div
-                key={skill.name}
-                className="skill-card group relative p-4 bg-white/5 dark:bg-white/5 light:bg-black/5 border border-white/10 dark:border-white/10 light:border-black/10 hover:border-red-500/50 transition-all duration-300"
-                data-cursor-hover
-                style={{ animationDelay: `${index * 30}ms` }}
+                key={row.tier}
+                className={`tier-row grid md:grid-cols-[180px_1fr] rounded-xl border overflow-hidden ${row.borderClass}`}
               >
-                {/* Proficiency indicator */}
-                <div 
-                  className="absolute top-2 right-2 w-4 h-4 rounded-full flex items-center justify-center"
-                  style={{ backgroundColor: profConfig.bgColor }}
-                >
-                  <ProficiencyIcon className="w-2.5 h-2.5" style={{ color: profConfig.color }} />
+                <div className={`p-4 md:p-4 border-b md:border-b-0 md:border-r border-white/10 ${row.bgClass}`}>
+                  <div className="flex items-center gap-2.5 mb-1.5">
+                    <div className={`w-9 h-9 rounded-lg flex items-center justify-center border ${row.borderClass} ${row.bgClass}`}>
+                      <TierIcon className={`w-4.5 h-4.5 ${row.colorClass}`} />
+                    </div>
+                    <span className={`font-display font-black text-2xl ${row.colorClass}`}>
+                      {row.tier}
+                    </span>
+                  </div>
+                  <h3 className="font-display font-bold text-white dark:text-white light:text-black text-sm md:text-base">
+                    {language === 'th' ? row.titleTh : row.title}
+                  </h3>
+                  <p className="font-body text-[11px] md:text-xs text-white/60 dark:text-white/60 light:text-black/60 mt-0.5 thai-text">
+                    {language === 'th' ? row.usageTh : row.usage}
+                  </p>
+                  <p className="font-body text-[10px] text-white/40 dark:text-white/40 light:text-black/40 mt-2">
+                    {row.items.length} {language === 'th' ? 'เทคโนโลยี' : 'technologies'}
+                  </p>
                 </div>
 
-                <div className="flex flex-col items-center text-center pt-1">
-                  <div 
-                    className="w-9 h-9 rounded-lg flex items-center justify-center mb-2 transition-all duration-300 group-hover:scale-110"
-                    style={{ backgroundColor: `${skill.color}15` }}
-                  >
-                    <Icon 
-                      icon={skill.icon}
-                      className="w-5 h-5 transition-transform duration-300" 
-                      style={{ color: skill.color }}
-                    />
+                <div className="p-3 md:p-3.5 bg-white/5 dark:bg-white/5 light:bg-black/5">
+                  <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 xl:grid-cols-5 gap-2">
+                    {row.items.map((skill) => (
+                      <div
+                        key={skill.name}
+                        className={`tier-chip group w-full inline-flex items-center border border-white/10 dark:border-white/10 light:border-black/10 bg-black/30 dark:bg-black/30 light:bg-white/60 hover:border-red-500/40 transition-colors duration-200 ${chipSizeClass}`}
+                        data-cursor-hover
+                        title={language === 'th' ? skill.descriptionTh : skill.description}
+                      >
+                        <div
+                          className={`${iconWrapClass} flex items-center justify-center`}
+                          style={{ backgroundColor: `${skill.color}1f` }}
+                        >
+                          <Icon icon={skill.icon} className={iconClass} style={{ color: skill.color }} />
+                        </div>
+                        <span className={`font-body text-white dark:text-white light:text-black ${textClass}`}>
+                          {skill.name}
+                        </span>
+                      </div>
+                    ))}
                   </div>
-                  <span className="font-body text-xs text-white dark:text-white light:text-black group-hover:text-red-500 transition-colors duration-300">
-                    {skill.name}
-                  </span>
                 </div>
               </div>
             );

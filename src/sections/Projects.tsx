@@ -6,22 +6,39 @@ import { ChevronRight, X, Play, Image as ImageIcon, Maximize2, Award } from 'luc
 import { projectsData, projectsConfig, translations } from '../config';
 import { useLanguage } from '../contexts/LanguageContext';
 import { useSectionTracking } from '../hooks/useSectionTracking';
-import { trackClick } from '../lib/analytics';
+import { trackClick, trackProjectInteraction } from '../lib/analytics';
 
 gsap.registerPlugin(ScrollTrigger);
 
 // Demo Loading Screen Component
-const DemoLoadingScreen = ({ isVisible, language }: { isVisible: boolean, language: 'th' | 'en' }) => {
+const DemoLoadingScreen = ({
+  isVisible,
+  language,
+  progress,
+}: {
+  isVisible: boolean;
+  language: 'th' | 'en';
+  progress: number;
+}) => {
   if (!isVisible) return null;
   return (
-    <div className="absolute inset-0 z-[500] flex flex-col items-center justify-center bg-black/95 backdrop-blur-md transition-opacity duration-300">
+    <div className="absolute inset-0 z-[500] flex flex-col items-center justify-center bg-white/95 transition-opacity duration-200">
       <div className="flex flex-col items-center gap-6 max-w-lg text-center p-8 slide-up-anim">
-        <div className="w-16 h-16 border-4 border-red-500 border-t-transparent rounded-full animate-spin shadow-[0_0_15px_rgba(239,68,68,0.5)]" />
-        <h3 className="text-3xl font-display font-bold text-white mb-2">
+        <div className="w-14 h-14 border-4 border-red-500 border-t-transparent rounded-full animate-spin" />
+        <h3 className="text-3xl font-display font-bold text-black mb-2">
           {language === 'th' ? 'กำลังเตรียม Demo...' : 'Starting Demo...'}
         </h3>
-        <div className="bg-red-500/10 border border-red-500/30 rounded-xl p-6 mt-4 shadow-xl">
-          <p className="text-red-400 font-body text-xl leading-relaxed thai-text font-bold">
+        <div className="w-full max-w-md">
+          <div className="h-2 w-full bg-black/10 rounded-full overflow-hidden">
+            <div
+              className="h-full bg-red-500 transition-[width] duration-75"
+              style={{ width: `${Math.max(6, progress)}%` }}
+            />
+          </div>
+          <div className="mt-2 text-sm font-body text-black/70">{progress}%</div>
+        </div>
+        <div className="bg-red-500/10 border border-red-500/30 rounded-xl p-6 mt-2">
+          <p className="text-red-500 font-body text-xl leading-relaxed thai-text font-bold">
             {language === 'th' 
               ? '⚠️ หมายเหตุ: นี่เป็นเพียงระบบ Demo แบบเบื้องต้น (ประมาณ 20% ของโปรเจกต์) ยังไม่ใช่ระบบการทำงานจริงทั้งหมด' 
               : '⚠️ Note: This is an early demo representing about 20% of the project. It is not the full production system.'}
@@ -60,15 +77,64 @@ const ProjectModal = ({
   const [activeTab, setActiveTab] = useState<'details' | 'preview' | 'gallery'>('details');
   const [isLoading, setIsLoading] = useState(true);
   const [isDemoLoading, setIsDemoLoading] = useState(false);
+  const [loadingProgress, setLoadingProgress] = useState(0);
   const iframeRef = useRef<HTMLIFrameElement>(null);
+  const previewContainerRef = useRef<HTMLDivElement>(null);
+  const loadingTimerRef = useRef<number | null>(null);
+  const loadingProgressRef = useRef<number | null>(null);
+
+  const clearLoadingTimers = () => {
+    if (loadingTimerRef.current) {
+      clearTimeout(loadingTimerRef.current);
+      loadingTimerRef.current = null;
+    }
+    if (loadingProgressRef.current) {
+      clearInterval(loadingProgressRef.current);
+      loadingProgressRef.current = null;
+    }
+  };
+
+  const startDemoLoadingToPreview = () => {
+    clearLoadingTimers();
+    const randomDuration = Math.floor(3000 + Math.random() * 1500); // 3000-4500ms
+    const startAt = performance.now();
+    setLoadingProgress(0);
+    setIsDemoLoading(true);
+
+    loadingProgressRef.current = window.setInterval(() => {
+      const elapsed = performance.now() - startAt;
+      const ratio = Math.min(1, elapsed / randomDuration);
+      setLoadingProgress(Math.floor(ratio * 100));
+    }, 50);
+
+    loadingTimerRef.current = window.setTimeout(() => {
+      clearLoadingTimers();
+      setLoadingProgress(100);
+      setIsDemoLoading(false);
+      setActiveTab('preview');
+    }, randomDuration);
+  };
+
+  const togglePreviewFullscreen = async () => {
+    try {
+      const node = previewContainerRef.current;
+      if (!node) return;
+      if (document.fullscreenElement) {
+        await document.exitFullscreen();
+      } else {
+        await node.requestFullscreen();
+      }
+    } catch {
+      // Ignore fullscreen errors from browser restrictions.
+    }
+  };
 
   const handlePreviewClick = () => {
     if (activeTab === 'preview') return;
-    setIsDemoLoading(true);
-    setTimeout(() => {
-      setIsDemoLoading(false);
-      setActiveTab('preview');
-    }, 5000);
+    if (project) {
+      trackProjectInteraction('open_preview_from_modal', project.id, project.name);
+    }
+    startDemoLoadingToPreview();
   };
 
   // Sync activeTab with initialTab when modal opens
@@ -76,22 +142,29 @@ const ProjectModal = ({
     if (isOpen) {
       if (initialTab === 'preview') {
         setActiveTab('details'); // Set background tab to details while loading
-        setIsDemoLoading(true);
-        const timer = setTimeout(() => {
-          setIsDemoLoading(false);
-          setActiveTab('preview');
-        }, 5000);
+        startDemoLoadingToPreview();
         setIsLoading(true);
-        return () => clearTimeout(timer);
+        return;
       } else {
         setActiveTab(initialTab);
         setIsLoading(true);
         setIsDemoLoading(false);
+        setLoadingProgress(0);
+        clearLoadingTimers();
       }
     } else {
       setIsDemoLoading(false);
+      setLoadingProgress(0);
+      clearLoadingTimers();
     }
   }, [isOpen, initialTab]);
+
+  useEffect(
+    () => () => {
+      clearLoadingTimers();
+    },
+    []
+  );
 
   useEffect(() => {
     if (isOpen) {
@@ -259,7 +332,7 @@ const ProjectModal = ({
           )}
 
           {activeTab === 'preview' && (
-            <div className="w-full h-full relative">
+            <div ref={previewContainerRef} className="w-full h-full relative">
               {isLoading && (
                 <div className="absolute inset-0 flex items-center justify-center bg-black z-[5]">
                   <div className="flex flex-col items-center gap-4">
@@ -293,13 +366,27 @@ const ProjectModal = ({
 
               {/* Bottom bar */}
               <div className="absolute bottom-4 left-4 right-4 flex items-center justify-between" style={{ zIndex: 20 }}>
-                <div className="px-4 py-2 bg-black/80 backdrop-blur-sm rounded-lg border border-white/10">
-                  <span className="text-white/60 text-xs font-body">
-                    {language === 'th' ? 'กด F11 เพื่อดูแบบเต็มจอ' : 'Press F11 for fullscreen'}
-                  </span>
+                <div className="flex items-center gap-2">
+                  <button
+                    onClick={togglePreviewFullscreen}
+                    className="flex items-center gap-2 px-4 py-2 bg-black/80 hover:bg-red-500 text-white rounded-lg text-sm font-body border border-white/10 transition-colors duration-300"
+                  >
+                    <Maximize2 className="w-4 h-4" />
+                    {language === 'th' ? 'ขยายเต็มจอ' : 'Fullscreen'}
+                  </button>
+                  <div className="px-3 py-2 bg-black/70 rounded-lg border border-white/10">
+                    <span className="text-white/60 text-xs font-body">
+                      {language === 'th' ? 'หรือกด F11' : 'or press F11'}
+                    </span>
+                  </div>
                 </div>
                 <button
-                  onClick={() => setActiveTab('details')}
+                  onClick={() => {
+                    if (project) {
+                      trackProjectInteraction('open_details_from_modal', project.id, project.name);
+                    }
+                    setActiveTab('details');
+                  }}
                   className="flex items-center gap-2 px-4 py-2 bg-red-500 hover:bg-red-600 text-white rounded-lg text-sm font-body transition-colors duration-300"
                 >
                   <ChevronRight className="w-4 h-4 rotate-180" />
@@ -324,10 +411,12 @@ const ProjectModal = ({
                       className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
                       onError={(e) => {
                         (e.target as HTMLImageElement).style.display = 'none';
-                        (e.target as HTMLImageElement).parentElement!.querySelector('.fallback')?.classList.remove('hidden');
+                        const fallback = (e.target as HTMLImageElement).parentElement!.querySelector('.fallback');
+                        fallback?.classList.remove('hidden');
+                        fallback?.classList.add('flex');
                       }}
                     />
-                    <div className="fallback hidden absolute inset-0 bg-gradient-to-br from-red-500/10 to-red-900/10 flex items-center justify-center">
+        <div className="fallback absolute inset-0 bg-gradient-to-br from-red-500/10 to-red-900/10 hidden items-center justify-center">
                       <span className="font-display font-black text-4xl text-white/10">{index + 1}</span>
                     </div>
                     {/* Hover overlay with zoom icon */}
@@ -347,7 +436,7 @@ const ProjectModal = ({
             </div>
           )}
         </div>
-        <DemoLoadingScreen isVisible={isDemoLoading} language={language} />
+        <DemoLoadingScreen isVisible={isDemoLoading} language={language} progress={loadingProgress} />
       </div>
     </div>,
     document.body
@@ -364,6 +453,7 @@ const Projects = () => {
   const triggersRef = useRef<ScrollTrigger[]>([]);
   const handleGlobalDemoClick = (project: typeof projectsData[0]) => {
     trackClick(`View Demo: ${project.name}`, 'Projects Card');
+    trackProjectInteraction('open_preview', project.id, project.name);
     setActiveProject(project);
     setInitialTab('preview');
   };
@@ -492,6 +582,7 @@ const Projects = () => {
                     <button
                       onClick={() => {
                         trackClick(`View Details: ${project.name}`, 'Projects Card');
+                        trackProjectInteraction('view_details', project.id, project.name);
                         setActiveProject(project);
                         setInitialTab('details');
                       }}

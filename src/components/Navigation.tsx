@@ -6,6 +6,8 @@ import { trackClick } from '../lib/analytics';
 
 const Navigation = () => {
   const [isScrolled, setIsScrolled] = useState(false);
+  const [showNav, setShowNav] = useState(false);
+  const [activeHref, setActiveHref] = useState('#home');
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const { language, toggleLanguage } = useLanguage();
 
@@ -13,12 +15,25 @@ const Navigation = () => {
 
   useEffect(() => {
     const handleScroll = () => {
-      setIsScrolled(window.scrollY > 100);
+      const y = window.scrollY;
+      setIsScrolled(y > 100);
+      setShowNav(y > 24 || isMobileMenuOpen);
+
+      // Track active section for underline indicator
+      const probe = y + window.innerHeight * 0.35;
+      let current = '#home';
+      for (const link of navigationConfig.navLinks) {
+        const section = document.querySelector(link.href) as HTMLElement | null;
+        if (!section) continue;
+        if (section.offsetTop <= probe) current = link.href;
+      }
+      setActiveHref(current);
     };
 
+    handleScroll();
     window.addEventListener('scroll', handleScroll, { passive: true });
     return () => window.removeEventListener('scroll', handleScroll);
-  }, []);
+  }, [navigationConfig.navLinks, isMobileMenuOpen]);
 
   const scrollToSection = (href: string) => {
     const element = document.querySelector(href);
@@ -32,6 +47,8 @@ const Navigation = () => {
     <>
       <nav
         className={`fixed top-0 left-0 right-0 z-50 transition-all duration-500 ease-custom-expo ${
+          showNav ? 'opacity-100 translate-y-0' : 'opacity-0 -translate-y-6 pointer-events-none'
+        } ${
           isScrolled
             ? 'bg-black/90 dark:bg-black/90 light:bg-white/90 backdrop-blur-md py-4'
             : 'bg-transparent py-6'
@@ -64,9 +81,18 @@ const Navigation = () => {
                   trackClick(`Nav: ${link.label}`, 'Navigation');
                   scrollToSection(link.href); 
                 }}
-                className="font-body text-sm text-white/70 dark:text-white/70 light:text-black/70 hover:text-red-500 transition-colors duration-300 uppercase tracking-widest thai-text"
+                className={`relative font-body text-sm transition-colors duration-300 uppercase tracking-widest thai-text ${
+                  activeHref === link.href
+                    ? 'text-red-500'
+                    : 'text-white/70 dark:text-white/70 light:text-black/70 hover:text-red-500'
+                }`}
               >
                 {link.label}
+                <span
+                  className={`absolute -bottom-1 left-0 h-[2px] bg-red-500 transition-all duration-300 ${
+                    activeHref === link.href ? 'w-full opacity-100' : 'w-0 opacity-0'
+                  }`}
+                />
               </a>
             ))}
             
@@ -121,7 +147,11 @@ const Navigation = () => {
               key={link.href}
               href={link.href}
               onClick={(e) => { e.preventDefault(); scrollToSection(link.href); }}
-              className="font-display font-bold text-3xl text-white dark:text-white light:text-black hover:text-red-500 transition-colors duration-300 uppercase"
+              className={`font-display font-bold text-3xl transition-colors duration-300 uppercase ${
+                activeHref === link.href
+                  ? 'text-red-500'
+                  : 'text-white dark:text-white light:text-black hover:text-red-500'
+              }`}
               style={{
                 transitionDelay: isMobileMenuOpen ? `${index * 100}ms` : '0ms',
                 opacity: isMobileMenuOpen ? 1 : 0,

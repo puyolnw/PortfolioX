@@ -104,33 +104,33 @@ const Contact = () => {
         {/* Content */}
         <div className="flex flex-col items-center max-w-3xl mx-auto">
           {/* Contact Details */}
-          <div className="w-full space-y-6 mb-12">
-            <div className="contact-info flex items-center gap-4 p-4 bg-white/5 dark:bg-white/5 light:bg-black/5 border border-white/10 dark:border-white/10 light:border-black/10 hover:border-red-500/50 transition-colors duration-300">
-              <div className="w-12 h-12 rounded-full bg-red-500/20 flex items-center justify-center">
-                <Mail className="w-5 h-5 text-red-500" />
+          <div className="w-full max-w-2xl space-y-3 mb-12">
+            <div className="contact-info flex items-center gap-3 py-2.5 px-3 bg-white/5 dark:bg-white/5 light:bg-black/5 border border-white/10 dark:border-white/10 light:border-black/10 hover:border-red-500/50 transition-colors duration-300">
+              <div className="w-10 h-10 rounded-full bg-red-500/20 flex items-center justify-center">
+                <Mail className="w-4 h-4 text-red-500" />
               </div>
-              <div>
-                <span className="block font-body text-xs text-white/50 dark:text-white/50 light:text-black/50 uppercase tracking-wider mb-1 thai-text">
+              <div className="leading-tight">
+                <span className="block font-body text-[10px] text-white/50 dark:text-white/50 light:text-black/50 uppercase tracking-wider mb-0.5 thai-text">
                   {t.email}
                 </span>
                 <a 
                   href={`mailto:${personalInfo.email}`}
-                  className="font-display font-bold text-white dark:text-white light:text-black hover:text-red-500 transition-colors duration-300"
+                  className="font-display font-bold text-sm text-white dark:text-white light:text-black hover:text-red-500 transition-colors duration-300"
                 >
                   {personalInfo.email}
                 </a>
               </div>
             </div>
 
-            <div className="contact-info flex items-center gap-4 p-4 bg-white/5 dark:bg-white/5 light:bg-black/5 border border-white/10 dark:border-white/10 light:border-black/10 hover:border-red-500/50 transition-colors duration-300">
-              <div className="w-12 h-12 rounded-full bg-red-500/20 flex items-center justify-center">
-                <MapPin className="w-5 h-5 text-red-500" />
+            <div className="contact-info flex items-center gap-3 py-2.5 px-3 bg-white/5 dark:bg-white/5 light:bg-black/5 border border-white/10 dark:border-white/10 light:border-black/10 hover:border-red-500/50 transition-colors duration-300">
+              <div className="w-10 h-10 rounded-full bg-red-500/20 flex items-center justify-center">
+                <MapPin className="w-4 h-4 text-red-500" />
               </div>
-              <div>
-                <span className="block font-body text-xs text-white/50 dark:text-white/50 light:text-black/50 uppercase tracking-wider mb-1 thai-text">
+              <div className="leading-tight">
+                <span className="block font-body text-[10px] text-white/50 dark:text-white/50 light:text-black/50 uppercase tracking-wider mb-0.5 thai-text">
                   {t.location}
                 </span>
-                <span className="font-display font-bold text-white dark:text-white light:text-black">
+                <span className="font-display font-bold text-sm text-white dark:text-white light:text-black">
                   {personalInfo.location}
                 </span>
               </div>

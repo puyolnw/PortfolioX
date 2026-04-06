@@ -3,6 +3,7 @@ import gsap from 'gsap';
 import { ScrollTrigger } from 'gsap/ScrollTrigger';
 import { ArrowDown, Code2, Terminal } from 'lucide-react';
 import { heroConfig, translations } from '../config';
+import { useIntroMorph } from '../contexts/IntroMorphContext';
 import { useLanguage } from '../contexts/LanguageContext';
 import { useSectionTracking } from '../hooks/useSectionTracking';
 import { trackClick } from '../lib/analytics';
@@ -17,12 +18,17 @@ const Hero = () => {
 
   const { language } = useLanguage();
   const t = translations[language].hero;
+  const introMorph = useIntroMorph();
+  const heroNameTargetRef = introMorph?.heroNameTargetRef;
+  const morphStarted = introMorph?.morphStarted ?? true;
+  const morphComplete = introMorph?.morphComplete ?? true;
 
   useEffect(() => {
     const section = sectionRef.current;
     const grid = gridRef.current;
     const content = contentRef.current;
     if (!section || !grid || !content) return;
+    if (!morphStarted) return;
 
     const loadTimer = setTimeout(() => setIsLoaded(true), 100);
 
@@ -32,57 +38,45 @@ const Hero = () => {
       const subtitle = content.querySelector('.subtitle-text');
       const ctaButtons = content.querySelectorAll('.cta-button');
 
-      const tl = gsap.timeline({ delay: 0.3 });
+      const tl = gsap.timeline({ delay: 0.15 });
 
-      // Grid cells flip in with stagger
+      // Grid: fade + slight lift (no 3D spin)
       tl.fromTo(
         cells,
+        { y: 36, opacity: 0 },
         {
-          rotateX: 90,
-          y: -100,
-          opacity: 0,
-        },
-        {
-          rotateX: 0,
           y: 0,
           opacity: 1,
-          duration: 1.2,
+          duration: 0.85,
           stagger: {
-            each: 0.05,
+            each: 0.04,
             from: 'random',
           },
           ease: 'expo.out',
         }
       );
 
-      // Title blocks decode animation
+      // Greeting / role chips: fade + slide up
       tl.fromTo(
         titleBlocks,
+        { opacity: 0, y: 22 },
         {
-          scale: 0,
-          rotate: 180,
-          opacity: 0,
-        },
-        {
-          scale: 1,
-          rotate: 0,
           opacity: 1,
-          duration: 0.6,
-          stagger: 0.1,
-          ease: 'back.out(1.7)',
+          y: 0,
+          duration: 0.55,
+          stagger: 0.08,
+          ease: 'power3.out',
         },
-        '-=0.5'
+        '-=0.45'
       );
 
-      // Subtitle fade in
       tl.fromTo(
         subtitle,
         { opacity: 0, y: 20 },
         { opacity: 1, y: 0, duration: 0.5, ease: 'power2.out' },
-        '-=0.3'
+        '-=0.25'
       );
 
-      // CTA buttons
       tl.fromTo(
         ctaButtons,
         { opacity: 0, y: 20 },
@@ -90,7 +84,6 @@ const Hero = () => {
         '-=0.2'
       );
 
-      // Scroll-based parallax
       const scrollTl = gsap.timeline({
         scrollTrigger: {
           trigger: section,
@@ -118,9 +111,9 @@ const Hero = () => {
 
     return () => {
       clearTimeout(loadTimer);
-      ctx.revert(); // Correct way to clean up GSAP context
+      ctx.revert();
     };
-  }, []);
+  }, [morphStarted]);
 
   const rows = heroConfig.gridRows || 6;
   const cols = heroConfig.gridCols || 8;
@@ -192,11 +185,16 @@ const Hero = () => {
             </span>
           </div>
 
-          {/* Main Title */}
+          {/* Main Title — ref for intro→hero morph; real text appears after morph */}
           <div className="mb-6">
-            <div className="title-block inline-block">
-              <h1 className="font-display font-black text-5xl md:text-7xl lg:text-8xl text-white dark:text-white light:text-black tracking-tighter">
-                Kittiphat
+            <div
+              ref={heroNameTargetRef}
+              className={`inline-block transition-opacity duration-300 ${
+                morphComplete ? 'opacity-100' : 'opacity-0'
+              }`}
+            >
+              <h1 className="font-display font-black text-6xl sm:text-7xl md:text-8xl lg:text-9xl text-white dark:text-white light:text-black tracking-tighter">
+                {t.name}
               </h1>
             </div>
           </div>

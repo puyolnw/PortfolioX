@@ -1,4 +1,4 @@
-import { useEffect, useRef } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { BrowserRouter, Routes, Route } from 'react-router-dom';
 import gsap from 'gsap';
 import { ScrollTrigger } from 'gsap/ScrollTrigger';
@@ -11,6 +11,8 @@ import Contact from './sections/Contact';
 import Footer from './sections/Footer';
 import Navigation from './components/Navigation';
 import CustomCursor from './components/CustomCursor';
+import KIntroOverlay from './components/KIntroOverlay';
+import { IntroMorphProvider } from './contexts/IntroMorphContext';
 import { LanguageProvider } from './contexts/LanguageContext';
 import { ThemeProvider } from './contexts/ThemeContext';
 import DemoRouter from './demo/DemoRouter';
@@ -19,53 +21,20 @@ gsap.registerPlugin(ScrollTrigger);
 
 function PortfolioPage() {
   const mainRef = useRef<HTMLDivElement>(null);
+  const heroNameTargetRef = useRef<HTMLDivElement>(null);
+  const [morphStarted, setMorphStarted] = useState(false);
+  const [morphComplete, setMorphComplete] = useState(false);
+
+  const introMorphValue = useMemo(
+    () => ({
+      heroNameTargetRef,
+      morphStarted,
+      morphComplete,
+    }),
+    [morphStarted, morphComplete]
+  );
 
   useEffect(() => {
-    let currentSkew = 0;
-    let targetSkew = 0;
-    let rafId: number;
-    const updateSkew = () => {
-      // Stop loop if modal is open to save resources
-      if (document.body.classList.contains('modal-open')) {
-        rafId = requestAnimationFrame(updateSkew);
-        return;
-      }
-
-      const delta = targetSkew - currentSkew;
-      if (Math.abs(delta) > 0.01) {
-        currentSkew += delta * 0.1;
-        if (mainRef.current) {
-          mainRef.current.style.transform = `skewY(${currentSkew}deg)`;
-        }
-      } else if (currentSkew !== 0) {
-        currentSkew = 0;
-        if (mainRef.current) {
-          mainRef.current.style.transform = 'skewY(0deg)';
-        }
-      }
-      rafId = requestAnimationFrame(updateSkew);
-    };
-    
-    const handleScroll = () => {
-      const scrollY = window.scrollY;
-      const lastScrollY = (window as any).lastScrollY || 0;
-      const scrollSpeed = Math.abs(scrollY - lastScrollY);
-      targetSkew = Math.min(scrollSpeed * 0.015, 2);
-      (window as any).lastScrollY = scrollY;
-    };
-    
-    window.addEventListener('scroll', handleScroll, { passive: true });
-    updateSkew();
-    
-    let scrollTimeout: ReturnType<typeof setTimeout>;
-    const resetSkew = () => {
-      clearTimeout(scrollTimeout);
-      scrollTimeout = setTimeout(() => {
-        targetSkew = 0;
-      }, 50);
-    };
-    window.addEventListener('scroll', resetSkew, { passive: true });
-    
     // --- SECURITY HARDENING ---
     const handleContextMenu = (e: MouseEvent) => {
       e.preventDefault();
@@ -103,41 +72,73 @@ function PortfolioPage() {
     document.addEventListener('keydown', handleKeyDown);
     
     return () => {
-      window.removeEventListener('scroll', handleScroll);
-      window.removeEventListener('scroll', resetSkew);
       document.removeEventListener('contextmenu', handleContextMenu);
       document.removeEventListener('keydown', handleKeyDown);
       if (debugInterval!) clearInterval(debugInterval);
-      cancelAnimationFrame(rafId);
     };
   }, []);
 
+  useEffect(() => {
+    document.body.style.overflow = morphComplete ? '' : 'hidden';
+    return () => {
+      document.body.style.overflow = '';
+    };
+  }, [morphComplete]);
+
+  const mainVisible = morphStarted || morphComplete;
+
   return (
-    <div className="relative bg-black dark:bg-black light:bg-white min-h-screen overflow-x-hidden">
-      {/* Grain overlay */}
-      <div className="grain-overlay opacity-[0.03] transition-opacity duration-500 [.modal-open_&]:opacity-0" />
-      
-      {/* Custom cursor */}
-      <CustomCursor />
-      
-      {/* Navigation */}
-      <Navigation />
-      
-      {/* Main content */}
-      <main ref={mainRef} className="relative will-change-transform [.modal-open_&]:opacity-20 transition-opacity duration-500">
-        <Hero />
-        <About />
-        <Experience />
-        <Skills />
-        <Projects />
-        <Contact />
-        <Footer />
-      </main>
-    </div>
+    <IntroMorphProvider value={introMorphValue}>
+      <div className="relative bg-black dark:bg-black light:bg-white min-h-screen overflow-x-hidden">
+        {!morphComplete && (
+          <KIntroOverlay
+            variant="overlay"
+            morphTargetRef={heroNameTargetRef}
+            onMorphStart={() => setMorphStarted(true)}
+            onComplete={() => setMorphComplete(true)}
+          />
+        )}
+
+        {/* Grain overlay */}
+        <div className="grain-overlay opacity-[0.03] transition-opacity duration-500 [.modal-open_&]:opacity-0" />
+
+        {/* Custom cursor */}
+        <CustomCursor />
+
+        {/* Navigation */}
+        <Navigation />
+
+        {/* Main content */}
+        <main
+          ref={mainRef}
+          className={`relative [.modal-open_&]:opacity-20 transition-opacity duration-500 ${
+            mainVisible ? 'opacity-100' : 'opacity-0'
+          }`}
+        >
+          <Hero />
+          <About />
+          <Experience />
+          <Skills />
+          <Projects />
+          <Contact />
+          <Footer />
+        </main>
+      </div>
+    </IntroMorphProvider>
   );
 }
 
 function App() {
+  useEffect(() => {
+    // When this app is rendered inside an iframe (project preview),
+    // force native cursor so pointer remains visible inside the frame.
+    const isEmbedded = window.self !== window.top;
+    document.documentElement.classList.toggle('embedded-iframe', isEmbedded);
+    return () => {
+      document.documentElement.classList.remove('embedded-iframe');
+    };
+  }, []);
+
   return (
     <LanguageProvider>
       <ThemeProvider>
